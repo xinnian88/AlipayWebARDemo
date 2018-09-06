@@ -13,7 +13,7 @@
   import Vue from 'vue'
   import {MdButton} from 'vue-material/dist/components';
   import ap from '@alipay/alipayjsapi/lib/alipayjsapi.inc.js';
-  import {
+  const {
     AR_CANVAS_RESIZE,
     getWebCameraAsync,
     CAMERA_QUALITY_HIGH,
@@ -32,7 +32,7 @@
     ERROR_CODE_INVALID_WEBGL_CONTEXT,
     // ERROR_CODE_NO_SPECIFIED_DETECTOR,
     NO_TAKE_PHOTO_FEATURE
-  } from '@alipay/alipay-webar';
+  } = window.WebAR;
   import 'vue-material/dist/vue-material.min.css'
 
   Vue.use(MdButton)
@@ -74,6 +74,7 @@
           console.log('AR_CANVAS_RESIZE', event);
         });
         try {
+          console.debug(WebAR, getWebCameraAsync);
           const camera = await getWebCameraAsync({
             facing: this.cameraFacing,
             quality: CAMERA_QUALITY_HIGH,
