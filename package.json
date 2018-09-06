@@ -1,0 +1,9 @@
+{
+  "devDependencies": {
+    "@vue/cli": "^3.0.1",
+    "eslint-plugin-vue": "^4.7.1"
+  },
+  "dependencies": {
+    "babel-runtime": "^6.26.0"
+  }
+}

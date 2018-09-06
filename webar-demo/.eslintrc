@@ -1,0 +1,32 @@
+{
+  "extends": "standard",
+  "plugins": ["vue", "jsx"],
+  "globals": {
+    "window": true,
+    "Float32Array": true,
+    "Uint8Array": true,
+    "ArrayBuffer": true,
+    "Symbol": true,
+    "AlipayJSBridge": true,
+    "Int32Array": true,
+    "Uint16Array": true,
+    "Uint32Array": true,
+    "Float64Array": true,
+    "Int8Array": true,
+    "Uint8ClampedArray": true,
+    "Int16Array": true,
+    "WebGL2RenderingContext": true,
+    "DataView": true,
+    // 第三方库使用
+    "define":true,
+    "THREE": true,
+    // webar async await 用到
+    "regeneratorRuntime": true
+  },
+  "parser": "babel-eslint",
+  "rules": {
+    "semi": ["error", "always"], //必须使用分号
+    "space-before-function-paren": 0,  // function前面的空格没有必要校验,
+    "no-unused-vars": 0
+  }
+}
