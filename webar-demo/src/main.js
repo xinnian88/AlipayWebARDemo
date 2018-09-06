@@ -2,7 +2,7 @@ import Vue from 'vue';
 import VueRouter from 'vue-router';
 import App from './App.vue';
 import CaptureImage from './components/CaptureImage.vue';
-import HelloWorld from './components/HelloWorld.vue';
+import HelloWorld from './components/index.vue';
 
 Vue.config.productionTip = false;
 
