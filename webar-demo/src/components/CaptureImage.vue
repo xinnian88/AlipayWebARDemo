@@ -3,8 +3,8 @@
         <canvas class="preview-canvas" ref="canvasEl"></canvas>
         <img src="" class="pre-image" ref="preImage"/>
         <div class="control-buttons">
-            <md-button class="md-raised md-primary" @click="captureImage">拍照</md-button>
-            <md-button class="md-raised md-primary" @click="resumeCamera">重拍</md-button>
+            <md-button class="md-raised md-primary" v-on:click="captureImage">拍照</md-button>
+            <md-button class="md-raised md-primary" v-on:click="resumeCamera">重拍</md-button>
         </div>
     </div>
 </template>
@@ -74,7 +74,6 @@
           console.log('AR_CANVAS_RESIZE', event);
         });
         try {
-          console.debug(WebAR, getWebCameraAsync);
           const camera = await getWebCameraAsync({
             facing: this.cameraFacing,
             quality: CAMERA_QUALITY_HIGH,
