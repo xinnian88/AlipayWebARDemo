@@ -15,7 +15,8 @@
 <script type='text/javascript'>
   import Vue from 'vue'
   import {MdButton} from 'vue-material/dist/components';
-  import ap from '@alipay/alipayjsapi/lib/alipayjsapi.inc.js';
+  // 通过外链加载
+  // import ap from '@alipay/alipayjsapi/lib/alipayjsapi.inc.js';
   const {
     AR_CANVAS_RESIZE,
     getWebCameraAsync,
@@ -54,6 +55,7 @@
         hasNewDetectorData: false,
         frameSize: [],
         quality: [],
+        detector: null,
         threeJSData: {
           faceMatrix: [[]],
           faceRect: [[142, 157, 192, 316]],
@@ -108,6 +110,7 @@
           };
           window.requestAnimationFrame(draw);
           const faceDetector = await camera.setDetectorAsync(FaceDetector);
+          this.detector = faceDetector;
           this.bindDetector(faceDetector);
           console.debug(faceDetector);
         } catch (err) {
@@ -331,6 +334,9 @@
             console.debug('use ARSession.takePhoto');
             const pictureSizeArray = [2000, 3000];
             try {
+              if (this.detector) {
+                this.detector.pause();
+              }
               const dataUrl = await this.camera.takePhoto({
                 imageWidth: pictureSizeArray[0],
                 imageHeight: pictureSizeArray[1],
@@ -368,6 +374,9 @@
           if (window.ARSession && window.ARSession.setCameraParameters) {
             // 为了使相机 startPreview 一次
             window.ARSession.setCameraParameters(true, {zoom: 0});
+          }
+          if (this.detector) {
+            this.detector.resume();
           }
           this.displayTarget.resume();
           this.$refs.preImage.style.display = 'none';
