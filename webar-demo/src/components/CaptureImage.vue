@@ -56,6 +56,7 @@
         frameSize: [],
         quality: [],
         detector: null,
+        facePosMatrix: null,
         threeJSData: {
           faceMatrix: [[]],
           faceRect: [[142, 157, 192, 316]],
@@ -219,14 +220,8 @@
           matrix4.transpose();
           // matrix4.multiply(new THREE.Matrix4().makeRotationY(180 * Math.PI / 180));
           const matrix4Ele = matrix4.elements;
-          if (matrix4Ele) {
-            // faceMatrix[0][11] = 300 - faceMatrix[0][11] / scaleNumX;
-            // matrix4Ele[3] = -matrix4Ele[3] / scaleNumX;
-            // matrix4Ele[7] = -matrix4Ele[7] / scaleNumX;
-          }
-          // console.log(matrix4Ele[11], matrix4Ele[7]);
           matrix.set.apply(matrix, matrix4.elements);
-          this.pacePosMatrix = matrix;
+          this.facePosMatrix = matrix;
         } else if (this.cameraFacing === CAMERA_FACING_BACK && this.hasNewDetectorData) {
           matrix4.set.apply(matrix4, faceMatrix);
           const percent = faceRect[2] / markerWidth;
@@ -238,11 +233,6 @@
           // 镜像翻转
           matrix4.multiply(new THREE.Matrix4().makeScale(-1, 1, 1));
           const matrix4Ele = matrix4.elements;
-          if (matrix4Ele) {
-            // 增加预先估计的景深
-            matrix4Ele[11] += 300;
-          }
-          // console.log(matrix4Ele[11], matrix4Ele[7]);
           matrix.set.apply(matrix, matrix4.elements);
           this.pacePosMatrix = matrix;
         }
