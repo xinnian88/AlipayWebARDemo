@@ -1,6 +1,7 @@
+/* eslint-disable */
 <template>
-    <div>
-        <canvas class="preview-canvas" ref="canvasEl"></canvas>
+    <div class="container">
+        <div class="preview-canvas" ref="canvasContainer"></div>
         <img src="" class="pre-image" ref="preImage"/>
         <div class="face-rect" ref="faceRect">
 
@@ -11,8 +12,10 @@
         </div>
     </div>
 </template>
-
-<script type='text/javascript'>
+<style lang="less" scoped>
+@import "./captureImage.less";
+</style>
+<script type="text/javascript">
   import Vue from 'vue'
   import {MdButton} from 'vue-material/dist/components';
   // 通过外链加载
@@ -36,8 +39,9 @@
     ERROR_CODE_INVALID_WEBGL_CONTEXT,
     // ERROR_CODE_NO_SPECIFIED_DETECTOR,
     NO_TAKE_PHOTO_FEATURE,
-    FaceDetector
-  } =  window.WebAR;
+    FaceDetector,
+    FaceIdentificationPhoto
+  } = window.WebAR;
   import 'vue-material/dist/vue-material.min.css'
 
   Vue.use(MdButton)
@@ -49,7 +53,6 @@
         isCameraOpened: false,
         camera: null,
         displayTarget: null,
-        glContext: null,
         isCaptureImage: false,
         haveFace: false,
         hasNewDetectorData: false,
@@ -80,12 +83,7 @@
     methods: {
       async openCamera () {
         const {clientWidth, clientHeight} = document.documentElement;
-        console.debug(this);
-        this.$refs['canvasEl'].width = clientWidth * window.devicePixelRatio;
-        this.$refs['canvasEl'].height = clientHeight * window.devicePixelRatio;
-        const glContext = this.$refs['canvasEl'].getContext('webgl');
-        this.glContext = glContext;
-        this.$refs['canvasEl'].addEventListener(AR_CANVAS_RESIZE, event => {
+        this.$refs['canvasContainer'].addEventListener(AR_CANVAS_RESIZE, event => {
           this.coverCanvas(event, clientWidth, clientHeight);
           console.log('AR_CANVAS_RESIZE', event);
         });
@@ -95,14 +93,13 @@
             quality: CAMERA_QUALITY_HIGH,
             // androidCameraFormat: 'nv21',
           });
-          console.debug('androidCameraFormat nv21');
           this.camera = camera;
           await camera.openAsync(60*1000);
           this.isCameraOpened = true;
           // 配置并生成 displayTarget
-          this.displayTarget = camera.createDisplayTarget(glContext, {
-            autoResize: true,
-            cameraSize: 'stretch'
+          this.displayTarget = camera.createDisplayTarget(this.$refs['canvasContainer'], {
+            aspectRatio: clientWidth / clientHeight,
+            autoResize: window.devicePixelRatio
           });
           // 绘制
           const draw = () => {
@@ -110,10 +107,32 @@
             window.requestAnimationFrame(draw);
           };
           window.requestAnimationFrame(draw);
-          const faceDetector = await camera.setDetectorAsync(FaceDetector);
+          this.displayTarget.resume();
+          const faceDetector = await camera.setDetectorAsync(FaceIdentificationPhoto);
+          let centerYPosition = clientHeight /2;
+          if (navigator.userAgent.search(/Android/gi) !== -1) {
+            centerYPosition -= 80;
+          }
+          faceDetector.setComputeParams({
+            x: clientWidth/ 2,
+            y: centerYPosition
+          }, {
+            minWidth: 200,
+            maxWidth: 300,
+            minHeight: 300,
+            maxHeight: 400
+          }, {
+            width: clientWidth,
+            height: clientHeight
+          })
           this.detector = faceDetector;
           this.bindDetector(faceDetector);
-          console.debug(faceDetector);
+          this.coverCanvas({
+            data: {
+              width: camera.resolution[0],
+              height: camera.resolution[1]
+            }
+          }, clientWidth, clientHeight);
         } catch (err) {
           console.error(err);
           if (err.code === CONSTRAINT_NOT_SATISFIED_ERROR.code) {
@@ -158,8 +177,8 @@
         }
       },
       bindDetector(faceDetector){
-        faceDetector.addEventListener(FaceDetector.EVENT_FACE_RECOGNIZED, data => {
-          console.debug(data.faces);
+        faceDetector.addEventListener(FaceIdentificationPhoto.CONST.EVENT_FACE_RECOGNIZED, data => {
+          console.debug(data);
           this.haveFace = true;
           this.hasNewDetectorData = true;
           // this.$refs['threeJSOverEl'].style.display = 'block';
@@ -170,9 +189,10 @@
             this.frameSize[1] = this.camera.resolution[1];
           }
           this.onReceiveData(data);
-          if (!this.requestAnimationFrameId) {
-            // this.drawFaceRectByTHREEJS(this.glContext, this.size.clientWidth, this.size.clientHeight);
-          }
+        })
+        faceDetector.addEventListener(FaceIdentificationPhoto.CONST.EVENT_FACE_LOSE, (data) => {
+          this.$refs.faceRect.style.display = 'none';
+          console.log('姿态不正确', data);
         })
         faceDetector.startRecognize();
       },
@@ -191,7 +211,7 @@
             if (result) {
               console.log('姿态正确');
               this.$refs.faceRect.style.display = 'block';
-              this.drawFaceRect(this.glContext, faceRect, this.canvasELPos.width, this.canvasELPos.height);
+              this.drawFaceRect(faceRect, this.canvasELPos.width, this.canvasELPos.height);
             } else {
               this.$refs.faceRect.style.display = 'none';
               console.log('姿态不正确');
@@ -201,6 +221,8 @@
             console.log('数据错误, 找不到faces');
           }
           this.hasNewDetectorData = false;
+        } else {
+          conole.error(this.canvasELPos);
         }
       },
       // 检测 face 的 旋转角度
@@ -250,7 +272,7 @@
           return false;
         }
       },
-      async drawFaceRect (webgl, faceRect, width, height) {
+      async drawFaceRect (faceRect, width, height) {
         const el = this.$refs.faceRect;
         const scaleNumX = width / this.quality[0];
         const scaleNumY = height / this.quality[1];
@@ -277,14 +299,8 @@
           width = height;
           height = temp;
         }
-        console.log(event.data, width, height, bodyWidth, bodyHeight);
         if (width / height > bodyWidth / bodyHeight) {
           const newCanvasWidth = width / height * bodyHeight;
-          this.$refs['canvasEl'].style.position = 'relative';
-          this.$refs['canvasEl'].style.height = bodyHeight + 'px';
-          this.$refs['canvasEl'].style.width = newCanvasWidth + 'px';
-          this.$refs['canvasEl'].style.left = (bodyWidth - newCanvasWidth) / 2 + 'px';
-          this.$refs['canvasEl'].style.top = 0 + 'px';
 
           this.canvasELPos.left = (bodyWidth - newCanvasWidth) / 2;
           this.canvasELPos.top = 0;
@@ -293,21 +309,12 @@
           this.canvasELPos.scale = newCanvasWidth / bodyWidth;
         } else {
           const newCanvasHeight = height / width * bodyWidth;
-          this.$refs['canvasEl'].style.position = 'relative';
-          this.$refs['canvasEl'].style.height = newCanvasHeight + 'px';
-          this.$refs['canvasEl'].style.width = bodyWidth + 'px';
-          this.$refs['canvasEl'].style.top = (bodyHeight - newCanvasHeight) / 2 + 'px';
-
           this.canvasELPos.left = 0;
           this.canvasELPos.top = (bodyHeight - newCanvasHeight) / 2;
           this.canvasELPos.width = bodyWidth;
           this.canvasELPos.height = newCanvasHeight;
           this.canvasELPos.scale = newCanvasHeight / bodyHeight;
         }
-
-        this.$refs.preImage.style.left = this.canvasELPos.left + 'px';
-        this.$refs.preImage.style.width = this.canvasELPos.width + 'px';
-        this.$refs.preImage.style.height = this.canvasELPos.height + 'px';
         console.log('canvasELPos::', this.canvasELPos);
 
         // this.$refs['canvasEl'].width = this.canvasELPos.width * window.devicePixelRatio;
@@ -318,42 +325,40 @@
           return;
         }
         this.isCaptureImage = true;
-        if (this.glContext) {
-          if (this.camera) {
-            this.$refs.preImage.style.display = 'block';
-            console.debug('use ARSession.takePhoto');
-            const pictureSizeArray = [2000, 3000];
-            try {
-              if (this.detector) {
-                this.detector.pause();
-              }
-              const dataUrl = await this.camera.takePhoto({
-                imageWidth: pictureSizeArray[0],
-                imageHeight: pictureSizeArray[1],
-                // 最大图片宽度
-                maxImageWidth: 1500
-              });
-              this.$refs.preImage.src = dataUrl;
-              this.displayTarget.pause();
-              // this.camera.closeAsync();
-              this.isCaptureImage = false;
-              console.debug(dataUrl.length);
-              ap.saveImage(dataUrl);
-            } catch (e) {
-              console.error(e);
-              // 不支持就自动fallback
-              if (e.code === NO_TAKE_PHOTO_FEATURE.code) {
-                this.displayTarget.snapshotImageDataURLAsync().then(dataURL => {
-                  this.$refs.preImage.src = dataURL;
-                  this.displayTarget.pause();
-                  // this.camera.closeAsync();
-                  this.isCaptureImage = false;
-                }).catch(() => {
-                  this.isCaptureImage = false;
-                });
-              } else {
+        if (this.camera) {
+          this.$refs.preImage.style.display = 'block';
+          console.debug('use ARSession.takePhoto');
+          const pictureSizeArray = [2000, 3000];
+          try {
+            if (this.detector) {
+              this.detector.pause();
+            }
+            const dataUrl = await this.camera.takePhoto({
+              imageWidth: pictureSizeArray[0],
+              imageHeight: pictureSizeArray[1],
+              // 最大图片宽度
+              maxImageWidth: 1500
+            });
+            this.$refs.preImage.src = dataUrl;
+            this.displayTarget.pause();
+            // this.camera.closeAsync();
+            this.isCaptureImage = false;
+            console.debug(dataUrl.length);
+            ap.saveImage(dataUrl);
+          } catch (e) {
+            console.error(e);
+            // 不支持就自动fallback
+            if (e.code === NO_TAKE_PHOTO_FEATURE.code) {
+              this.displayTarget.snapshotImageDataURLAsync().then(dataURL => {
+                this.$refs.preImage.src = dataURL;
+                this.displayTarget.pause();
+                // this.camera.closeAsync();
                 this.isCaptureImage = false;
-              }
+              }).catch(() => {
+                this.isCaptureImage = false;
+              });
+            } else {
+              this.isCaptureImage = false;
             }
           }
         }
@@ -382,37 +387,4 @@
   }
 </script>
 
-<style lang="less" scoped>
-    .pre-image, .preview-canvas {
-        position: fixed;
-        max-width: inherit;
-        width: 100%;
-        height: 100%;
-        top: 0px;
-        left: 0px;
-    }
 
-    .pre-image {
-        z-index: 2;
-    }
-
-    .control-buttons {
-        position: fixed;
-        width: 100%;
-        height: 100px;
-        bottom: 0px;
-        z-index: 3;
-        background-color: #fff;
-    }
-
-    .face-rect {
-        position: fixed;
-        z-index: 4;
-        top: 0;
-        left: 0;
-        width: 100px;
-        height: 100px;
-        border: 1px solid red;
-        display: none;
-    }
-</style>

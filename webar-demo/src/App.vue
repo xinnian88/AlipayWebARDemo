@@ -10,7 +10,6 @@ import HelloWorld from './components/index.vue'
 export default {
   name: 'app',
   components: {
-    HelloWorld
   }
 }
 </script>

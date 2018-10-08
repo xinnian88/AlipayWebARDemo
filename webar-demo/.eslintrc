@@ -1,6 +1,6 @@
 {
   "extends": "standard",
-  "plugins": ["vue", "jsx"],
+  "plugins": ["vue"],
   "globals": {
     "window": true,
     "Float32Array": true,
